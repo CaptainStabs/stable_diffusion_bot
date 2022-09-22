@@ -15,7 +15,7 @@
 
 Requires https://github.com/invoke-ai/InvokeAI.
 
-Copy the `ldm` [folder](main/ldm) from this repo to your stable diffusion (InvokeAI) main folder and overwrite `server.py` with my version.
+Copy the `ldm` [folder](ldm) from this repo to your stable diffusion (InvokeAI) main folder and overwrite `server.py` with my version.
 
 You must setup the [config.json](config.json) file.
 
