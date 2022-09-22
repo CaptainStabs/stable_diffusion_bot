@@ -9,6 +9,9 @@
   <a href="//github.com/CaptainStabs/stable_diffusion_bot/issues"><img src="https://img.shields.io/github/issues-raw/kkrypt0nn/Python-Discord-Bot-Template"></a>
 </p>
 
+## How to add bot to server
+Invite your bot on servers using the following invite: 
+https://discord.com/oauth2/authorize?&client_id=YOUR_APPLICATION_ID_HERE&scope=bot+applications.commands&permissions=PERMISSIONS ( Replace YOUR_APPLICATION_ID_HERE with the application ID and replace PERMISSIONS with the required permissions your bot needs that it can be get at the bottom of a this page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
 
 ## How to set up
 
