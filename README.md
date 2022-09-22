@@ -13,6 +13,10 @@
 
 ## How to set up
 
+Requires https://github.com/invoke-ai/InvokeAI.
+
+Copy the `ldm` folder from this repo to your stable diffusion (InvokeAI) main folder and overwrite `server.py` with my version.
+
 To set up the bot I made it as simple as possible. I now created a [config.json](config.json) file where you can put the
 needed things to edit.
 
