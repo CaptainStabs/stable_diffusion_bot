@@ -10,68 +10,6 @@
   <a href="//github.com/kkrypt0nn/Python-Discord-Bot-Template/issues"><img src="https://img.shields.io/github/issues-raw/kkrypt0nn/Python-Discord-Bot-Template"></a>
 </p>
 
-This repository is a template that everyone can use for the start of their discord bot.
-
-When I first started creating my discord bot it took me a while to get everything setup and working with cogs and more.
-I would've been happy if there were any template existing. However, there wasn't any existing template. That's why I
-decided to create my own template to let <b>you</b> guys create your discord bot easily.
-
-Please note that this template is not supposed to be the best template, but a good template to start learning how
-discord.py works and to make your own bot easily.
-
-If you plan to use this template to make your own template or bot, you **have to**:
-
-- Keep the credits, and a link to this repository in all the files that contains my code
-- Keep the same license for unchanged code
-
-See [the license file](https://github.com/kkrypt0nn/Python-Discord-Bot-Template/blob/master/LICENSE.md) for more
-information, I reserve the right to take down any repository that does not meet these requirements.
-
-## Support
-
-Before requesting support, you should know that this template requires you to have at least a **basic knowledge** of
-Python and the library is made for advanced users. Do not use this template if you don't know the
-basics. [Here's](https://pythondiscord.com/pages/resources) a link for resources to learn python.
-
-If you need some help for something, do not hesitate to join my discord server [here](https://discord.gg/mTBrXyWxAF).
-
-All the updates of the template are available [here](UPDATES.md).
-
-## Disclaimer
-
-Slash commands can take some time to get registered globally, so if you want to test a command you should use
-the `@app_commands.guilds()` decorator so that it gets registered instantly. Example:
-
-```py
-@commands.hybrid_command(
-  name="command",
-  description="Command description",
-)
-@app_commands.guilds(GUILD_ID) # Place your guild ID here
-```
-
-When using the template you confirm that you have read the [license](LICENSE.md) and comprehend that I can take down
-your repository if you do not meet these requirements.
-
-Please do not open issues or pull requests about things that are written in the [TODO file](TODO.md), they are **already** under work for a future version of the template.
-
-## How to download it
-
-This repository is now a template, on the top left you can simply click on "**Use this template**" to create a GitHub
-repository based on this template.
-
-Alternatively you can do the following:
-
-* Clone/Download the repository
-    * To clone it and get the updates you can definitely use the command
-      `git clone`
-* Create a discord bot [here](https://discord.com/developers/applications)
-* Get your bot token
-* Invite your bot on servers using the following invite:
-  https://discord.com/oauth2/authorize?&client_id=YOUR_APPLICATION_ID_HERE&scope=bot+applications.commands&permissions=PERMISSIONS (
-  Replace `YOUR_APPLICATION_ID_HERE` with the application ID and replace `PERMISSIONS` with the required permissions
-  your bot needs that it can be get at the bottom of a this
-  page https://discord.com/developers/applications/YOUR_APPLICATION_ID_HERE/bot)
 
 ## How to set up
 
