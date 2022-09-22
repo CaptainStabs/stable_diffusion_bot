@@ -1,4 +1,4 @@
-# Python Discord Bot Template
+# Stable Diffusion Discord Bot
 
 <p align="center">
   <a href="//discord.gg/mTBrXyWxAF"><img src="https://img.shields.io/discord/739934735387721768?logo=discord"></a>
@@ -62,6 +62,13 @@ If you have just installed python today, then you just need to use the following
 ```
 python bot.py
 ```
+
+To start the stable diffusion web-server that the bot uses, in a seperate terminal (in the stable diffusion working directory) run:
+```
+python ./scripts/dream.py --web
+```
+
+You can run it with whatever other parameters you want (such as `-F`)
 
 ## License
 
