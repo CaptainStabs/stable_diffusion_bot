@@ -63,24 +63,6 @@ If you have just installed python today, then you just need to use the following
 python bot.py
 ```
 
-## Issues or Questions
-
-If you have any issues or questions of how to code a specific command, you can:
-
-* Join my discord server [here](https://discord.gg/mTBrXyWxAF)
-* Post them [here](https://github.com/kkrypt0nn/Python-Discord-Bot-Template/issues)
-
-Me or other people will take their time to answer and help you.
-
-## Versioning
-
-We use [SemVer](http://semver.org) for versioning. For the versions available, see
-the [tags on this repository](https://github.com/kkrypt0nn/Python-Discord-Bot-Template/tags).
-
-## Built With
-
-* [Python 3.9.12](https://www.python.org/)
-
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE.md](LICENSE.md) file for details
