@@ -23,13 +23,15 @@ You must setup the [config.json](config.json) file.
 
 Here is an explanation of what everything is:
 
-| Variable                  | What it is                                                            |
+| Variable                  | Description                                                           |
 | ------------------------- | ----------------------------------------------------------------------|
 | YOUR_BOT_PREFIX_HERE      | The prefix you want to use for normal commands                        |
 | YOUR_BOT_TOKEN_HERE       | The token of your bot                                                 |
 | YOUR_BOT_PERMISSIONS_HERE | The permissions integer your bot needs when it gets invited           |
 | YOUR_APPLICATION_ID_HERE  | The application ID of your bot                                        |
 | OWNERS                    | The user ID of all the bot owners                                     |
+| img_base_folder           | The path to where stable diffusion saves the images (if on windows ensure escaped backslashes) |
+| server_url                | By default stable diffusion's web server will run on the provided IP+port, only change if you changed your settings |
 
 
 ## How to start
