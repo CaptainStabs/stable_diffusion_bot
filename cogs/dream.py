@@ -26,6 +26,16 @@ class Dream(commands.Cog, name="dream"):
         self.bot = bot
         self.pat = re.compile('''(?<="url": "\.\/outputs\/img-samples\/).*\.png(?=",)''')
         self.seed_pat = re.compile('''(?<="seed": )\d{10}(?=,)''')
+        self.headers = {
+        'host': '127.0.0.1',
+        'content-type': 'application/json'
+        }
+
+        # Load cog-specific configs
+        self.img_base_folder = bot.config["img_base_folder"]
+        self.server_url = bot.config["server_url"]
+
+
 
 
     # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
@@ -38,8 +48,8 @@ class Dream(commands.Cog, name="dream"):
     # This will only allow owners of the bot to execute the command -> config.json
     # @checks.is_owner()
     async def dream_command(self, context: Context, prompt: str, seed=-1, strength=0.75, cfgscale=7.5, initimg=None):
-        message = prompt
         await context.defer()
+        message = prompt
         """
         Dream up an image
 
@@ -63,8 +73,8 @@ class Dream(commands.Cog, name="dream"):
         if initimg:
             # Previously generated image
             initimg = initimg.strip()
-            if len(initimg) == 20:
-                img = open("F:\\stable-diffusion\\outputs\\img-samples\\bot\\" + initimg, "rb").read()
+            if len(initimg) == 21:
+                img = open(self.img_base_folder + initimg, "rb").read()
             
             # Prevent non-images from being downloaded, stupid implementation, but I mostly trust the people using the bot
             elif ".png" or ".jpg" in initimg:
@@ -97,10 +107,6 @@ class Dream(commands.Cog, name="dream"):
         "upscale_level": "",
         "upscale_strength": "0.75"
         })
-        headers = {
-        'host': '127.0.0.1',
-        'content-type': 'application/json'
-        }
 
         # async with aiohttp.ClientSession() as session:
         #     async with session.post("http://127.0.0.1:9090/#", data=payload, headers=headers) as r:
@@ -111,9 +117,8 @@ class Dream(commands.Cog, name="dream"):
         #         # img_path = "F:\\stable-diffusion\\outputs\\img-samples\\000004.1291979794.png"
         #         await context.send(file=discord.File(img_path))
 
-        url = "http://127.0.0.1:9090/#"
 
-        r = requests.request("POST", url, headers=headers, data=payload).text
+        r = requests.request("POST", self.server_url, headers=self.headers, data=payload).text
         print(r)
         r = json.loads(r)
         # img_name = re.findall(self.pat, r)[0]
@@ -125,13 +130,10 @@ class Dream(commands.Cog, name="dream"):
 
         img_name = r["url"].split("/")[-1]
         seed_name = r["seed"]
-        img_path = "F:\\stable-diffusion\\outputs\\img-samples\\bot\\" + img_name
+        img_path = self.img_base_folder + img_name
         print(img_path)
         # await context.channel.send(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
         await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
-
-        # Don't forget to remove "pass", I added this just because there's no content in the method.
-        # pass
 
 
 # And then we finally add the cog to the bot so that it can load, unload, reload and use it's content.
