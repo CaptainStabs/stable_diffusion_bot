@@ -17,6 +17,8 @@ import re
 import requests
 import aiohttp
 import base64
+import asyncio
+
 
 
 
@@ -36,6 +38,11 @@ class Dream(commands.Cog, name="dream"):
         self.server_url = bot.config["server_url"]
 
 
+    def generate_image(self, payload):
+        r = requests.request("POST", self.server_url, headers=self.headers, data=payload).text
+        print(r)
+        r = json.loads(r)
+        return r
 
 
     # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
@@ -49,6 +56,7 @@ class Dream(commands.Cog, name="dream"):
     # @checks.is_owner()
     async def dream_command(self, context: Context, prompt: str, seed=-1, strength=0.75, cfgscale=7.5, initimg=None):
         await context.defer()
+        loop = asyncio.get_running_loop()
         message = prompt
         """
         Dream up an image
@@ -118,9 +126,7 @@ class Dream(commands.Cog, name="dream"):
         #         await context.send(file=discord.File(img_path))
 
 
-        r = requests.request("POST", self.server_url, headers=self.headers, data=payload).text
-        print(r)
-        r = json.loads(r)
+        r = await loop.run_in_executor(None, self.generate_image, payload)
         # img_name = re.findall(self.pat, r)[0]
         # try:
         #     seed_name = re.findall(self.seed_pat, r)[0]
