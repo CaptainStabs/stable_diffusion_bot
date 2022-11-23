@@ -2,7 +2,7 @@ import json
 import base64
 import mimetypes
 import os
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from ldm.dream.pngwriter import PngWriter
 from threading import Event
 
@@ -197,6 +197,6 @@ class DreamServer(BaseHTTPRequestHandler):
             return
 
 
-class ThreadingDreamServer(ThreadingHTTPServer):
+class ThreadingDreamServer(HTTPServer):
     def __init__(self, server_address):
         super(ThreadingDreamServer, self).__init__(server_address, DreamServer)
