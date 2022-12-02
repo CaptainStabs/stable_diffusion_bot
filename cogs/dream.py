@@ -52,9 +52,19 @@ class Dream(commands.Cog, name="dream"):
     )
     # This will only allow non-blacklisted members to execute the command
     @checks.not_blacklisted()
+
     # This will only allow owners of the bot to execute the command -> config.json
     # @checks.is_owner()
-    async def dream_command(self, context: Context, prompt: str, seed=-1, strength=0.75, cfgscale=7.5, initimg=None):
+
+    @discord.app_commands.describe(
+        prompt="Prompt for image generation",
+        seed="Seed for image, default is current epoch time",
+        strength="Amount of noise that is added to input image",
+        cfgscale="Adjust how much the image looks like the prompt and/or initimg",
+        initimg="Initial image to use",
+        steps="Number of steps to take to generate, must be < 50 (default 50)"
+    )
+    async def dream_command(self, context: Context, prompt: str, seed=-1, strength=0.75, cfgscale=7.5, initimg=None, steps=50):
         await context.defer()
         loop = asyncio.get_running_loop()
         message = prompt
@@ -67,6 +77,12 @@ class Dream(commands.Cog, name="dream"):
         :param strength: make stronk
         :param initimg: Either a file from the message, or a previously generated img
         """
+        if initimg and strength > 1:
+            await context.reply("**ERROR:** Strength must be between 0.0 and 1.0")
+        
+        if steps > 50 or steps < 1:
+            await context.reply("**ERROR:** Steps must be between 1 and 50")
+
         try:
             await context.reply(f"{context.author.mention} requested an image of: `{message}`")
         except:
