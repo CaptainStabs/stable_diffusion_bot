@@ -15,6 +15,7 @@ from helpers import checks
 import json
 import re
 import requests
+import urllib3
 import aiohttp
 import base64
 import asyncio
@@ -39,7 +40,11 @@ class Dream(commands.Cog, name="dream"):
 
 
     def generate_image(self, payload):
-        r = requests.request("POST", self.server_url, headers=self.headers, data=payload).text
+        try:
+            r = requests.request("POST", self.server_url, headers=self.headers, data=payload).text
+        except requests.exceptions.ConnectionError:
+            return False
+            
         print(r)
         r = json.loads(r)
         return r
@@ -130,7 +135,8 @@ class Dream(commands.Cog, name="dream"):
             "fit": "on",
             "gfpgan_strength": "0.8",
             "upscale_level": "",
-            "upscale_strength": "0.75"
+            "upscale_strength": "0.75",
+            "steps": steps
             })
 
             # async with aiohttp.ClientSession() as session:
@@ -144,19 +150,25 @@ class Dream(commands.Cog, name="dream"):
 
 
             r = await loop.run_in_executor(None, self.generate_image, payload)
-            # img_name = re.findall(self.pat, r)[0]
-            # try:
-            #     seed_name = re.findall(self.seed_pat, r)[0]
-            # except IndexError:
-            #     seed_name = "IndexError"
-            #     print(r)
 
-            img_name = r["url"].split("/")[-1]
-            seed_name = r["seed"]
-            img_path = self.img_base_folder + img_name
-            print(img_path)
-            # await context.channel.send(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
-            await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
+            if r:
+                # img_name = re.findall(self.pat, r)[0]
+                # try:
+                #     seed_name = re.findall(self.seed_pat, r)[0]
+                # except IndexError:
+                #     seed_name = "IndexError"
+                #     print(r)
+
+                img_name = r["url"].split("/")[-1]
+                seed_name = r["seed"]
+                img_path = self.img_base_folder + img_name
+                print(img_path)
+                # await context.channel.send(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
+                await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: '{steps}   Filename: `{img_name}`", file=discord.File(img_path))
+           
+            else:
+                await context.reply("SD backend is offline, please try again later", delete_after=10)
+
         else:
             await context.reply("This command must be used in an NSFW channel.")
 
