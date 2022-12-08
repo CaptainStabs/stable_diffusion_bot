@@ -167,7 +167,7 @@ class Dream(commands.Cog, name="dream"):
                 await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: '{steps}   Filename: `{img_name}`", file=discord.File(img_path))
            
             else:
-                await context.reply("SD backend is offline, please try again later", delete_after=10)
+                await context.reply("SD backend is offline, please try again later")
 
         else:
             await context.reply("This command must be used in an NSFW channel.")
