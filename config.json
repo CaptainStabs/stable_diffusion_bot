@@ -1,0 +1,12 @@
+{
+  "prefix": "YOUR_BOT_PREFIX_HERE",
+  "token": "YOUR_BOT_TOKEN_HERE",
+  "permissions": "2147584000",
+  "application_id": "YOUR_APPLICATION_ID_HERE",
+  "owners": [
+    123456789,
+    987654321
+  ],
+  "img_base_folder": "F:\\stable-diffusion\\outputs\\img-samples\\bot\\",
+  "server_url": "http://127.0.0.1:9090/#"
+}
