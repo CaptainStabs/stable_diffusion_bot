@@ -164,7 +164,7 @@ class Dream(commands.Cog, name="dream"):
                 img_path = self.img_base_folder + img_name
                 print(img_path)
                 # await context.channel.send(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
-                await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: '{steps}   Filename: `{img_name}`", file=discord.File(img_path))
+                await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Filename: `{img_name}`", file=discord.File(img_path))
            
             else:
                 await context.reply("SD backend is offline, please try again later")
