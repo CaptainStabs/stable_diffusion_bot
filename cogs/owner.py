@@ -131,7 +131,10 @@ class Owner(commands.Cog, name="owner"):
             description=f"Successfully loaded the `{cog}` cog.",
             color=0x9C84EF
         )
-        await context.send(embed=embed)
+        
+        await context.send(embed=embed,delete_after=5)
+        await context.send(embed=embed,delay=5)
+
 
     @commands.hybrid_command(
         name="unload",
@@ -140,7 +143,7 @@ class Owner(commands.Cog, name="owner"):
     @app_commands.describe(cog="The name of the cog to unload")
     @checks.is_owner()
     async def unload(self, context: Context, cog: str) -> None:
-        """
+        """ 
         The bot will unload the given cog.
 
         :param context: The hybrid command context.
