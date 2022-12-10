@@ -27,8 +27,6 @@ import asyncio
 class Dream(commands.Cog, name="dream"):
     def __init__(self, bot):
         self.bot = bot
-        self.pat = re.compile('''(?<="url": "\.\/outputs\/img-samples\/).*\.png(?=",)''')
-        self.seed_pat = re.compile('''(?<="seed": )\d{10}(?=,)''')
         self.headers = {
         'host': '127.0.0.1',
         'content-type': 'application/json'
@@ -93,12 +91,6 @@ class Dream(commands.Cog, name="dream"):
                 await context.reply(f"{context.author.mention} requested an image of: `{message}`")
             except:
                 await context.channel.send(f"{context.author.mention} requested an image of: `{message}`")
-            # await context.channel.send(f"{context.author.mention} requested an image of: `{message}`")
-
-
-            # if initimg:
-            #     
-            # Do your stuff here
 
             if initimg:
                 # Previously generated image
@@ -139,26 +131,9 @@ class Dream(commands.Cog, name="dream"):
             "steps": steps
             })
 
-            # async with aiohttp.ClientSession() as session:
-            #     async with session.post("http://127.0.0.1:9090/#", data=payload, headers=headers) as r:
-            #         # r = requests.request("POST", url, headers=headers, data=payload).text
-            #         img_name = re.findall(self.pat, r)[0]
-            #         img_path = "F:\\stable-diffusion\\outputs\\img-samples\\" + img_name
-            #         print(img_path)
-            #         # img_path = "F:\\stable-diffusion\\outputs\\img-samples\\000004.1291979794.png"
-            #         await context.send(file=discord.File(img_path))
-
-
             r = await loop.run_in_executor(None, self.generate_image, payload)
 
             if r:
-                # img_name = re.findall(self.pat, r)[0]
-                # try:
-                #     seed_name = re.findall(self.seed_pat, r)[0]
-                # except IndexError:
-                #     seed_name = "IndexError"
-                #     print(r)
-
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["seed"]
                 img_path = self.img_base_folder + img_name
