@@ -9,6 +9,8 @@ Version: 5.0
 from mimetypes import init
 from discord.ext import commands
 from discord.ext.commands import Context
+from discord import app_commands
+
 import discord
 
 from helpers import checks
@@ -19,8 +21,7 @@ import urllib3
 import aiohttp
 import base64
 import asyncio
-
-
+from typing import List
 
 
 # Here we name the cog and create a new class for the cog.
@@ -52,24 +53,39 @@ class Dream(commands.Cog, name="dream"):
         name="dream",
         description="Generate image from prompt",
     )
+
     # This will only allow non-blacklisted members to execute the command
     @checks.not_blacklisted()
 
     # This will only allow owners of the bot to execute the command -> config.json
     # @checks.is_owner()
 
-    @discord.app_commands.describe(
+
+    @app_commands.describe(
         prompt="Prompt for image generation",
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
         initimg="Initial image to use",
-        steps="Number of steps to take to generate, must be < 50 (default 50)"
+        steps="Number of steps to take to generate, must be < 50 (default 50)",
+        sampler="Which sampler to use for image generation, default is kmls",
     )
 
-    async def dream_command(self, context: Context, prompt: str, seed=-1, strength=0.75, cfgscale=7.5, initimg=None, steps=50):
-        await context.defer()
+    # @app_commands.command(name="dream", description="Generate image from prompt")
+    @app_commands.choices(sampler=[
+        app_commands.Choice(name="DDIM", value="ddim"),
+        app_commands.Choice(name="PLMS", value="plms"),
+        app_commands.Choice(name="KDPM_2", value="k_dpm_2"),
+        app_commands.Choice(name="KDPM_2A", value="k_dpm_2_a"),
+        app_commands.Choice(name="KEULER", value="k_euler"),
+        app_commands.Choice(name="KEULER_A", value="k_euler_a"),
+        app_commands.Choice(name="KHEUN", value="k_heun"),
+    ])
+
+
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None):
         if context.channel.is_nsfw():
+            await context.defer()
             loop = asyncio.get_running_loop()
             message = prompt
             """
@@ -112,13 +128,16 @@ class Dream(commands.Cog, name="dream"):
                     img_type = "jpeg"
 
                 initimg = f"data:image/{img_type};base64,{str(base64.b64encode(img).decode('utf-8'))}"
-
+            
+            if not sampler:
+                sampler = "k_lms"
+            
             payload = json.dumps({
             "prompt": f"{message}",
             "iterations": "1",
             "steps": "50",
             "cfgscale": f"{cfgscale}",
-            "sampler": "k_lms",
+            "sampler": f"{sampler}",
             "width": "512",
             "height": "512",
             "seed": f"{seed}",
@@ -139,7 +158,7 @@ class Dream(commands.Cog, name="dream"):
                 img_path = self.img_base_folder + img_name
                 print(img_path)
                 # await context.channel.send(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
-                await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Filename: `{img_name}`", file=discord.File(img_path))
+                await context.reply(f"Prompt: `{message}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`", file=discord.File(img_path))
            
             else:
                 await context.reply("SD backend is offline, please try again later")
