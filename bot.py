@@ -13,6 +13,7 @@ import platform
 import random
 import sqlite3
 import sys
+import traceback as tb
 
 from contextlib import closing
 
@@ -216,6 +217,7 @@ async def load_cogs() -> None:
                 await bot.load_extension(f"cogs.{extension}")
                 print(f"Loaded extension '{extension}'")
             except Exception as e:
+                tb.print_exc()
                 exception = f"{type(e).__name__}: {e}"
                 print(f"Failed to load extension {extension}\n{exception}")
 
