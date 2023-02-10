@@ -45,6 +45,7 @@ class Dream(commands.Cog, name="dream"):
         # Queues
         # Workaround to get data from  get_generation_result (which is called by socketio.on)
         self.result_queue = queue.Queue()
+        self.job_queue = queue.Queue()
 
     def generate_image(self, generation_params):
         self.sio.emit("generateImage", (generation_params, False, False))
@@ -83,6 +84,8 @@ class Dream(commands.Cog, name="dream"):
         initimg="Initial image to use",
         steps="Number of steps to take to generate, must be < 50 (default 50)",
         sampler="Which sampler to use for image generation, default is kmls",
+        width="Width of generated image, default 512",
+        height="Height of generated image, default 512",
     )
 
     # @app_commands.command(name="dream", description="Generate image from prompt")
@@ -94,11 +97,45 @@ class Dream(commands.Cog, name="dream"):
         app_commands.Choice(name="KEULER", value="k_euler"),
         app_commands.Choice(name="KEULER_A", value="k_euler_a"),
         app_commands.Choice(name="KHEUN", value="k_heun"),
+        app_commands.Choice(name="DPMPP_2", value="dpmpp_2"),
+        app_commands.Choice(name="K_DPMPP_2", value="k_dpmpp_2"),
     ])
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None):
+    @app_commands.choices(width=[
+        app_commands.Choice(name="64", value=64),
+        app_commands.Choice(name="128", value=128),
+        app_commands.Choice(name="192", value=192),
+        app_commands.Choice(name="256", value=256),
+        app_commands.Choice(name="320", value=320),
+        app_commands.Choice(name="384", value=384),
+        app_commands.Choice(name="448", value=448),
+        app_commands.Choice(name="512", value=512),
+        app_commands.Choice(name="576", value=576),
+        app_commands.Choice(name="640", value=640),
+        app_commands.Choice(name="704", value=704),
+        app_commands.Choice(name="768", value=768),
+        app_commands.Choice(name="832", value=832),
+    ])
+
+    @app_commands.choices(height=[
+        app_commands.Choice(name="64", value=64),
+        app_commands.Choice(name="128", value=128),
+        app_commands.Choice(name="192", value=192),
+        app_commands.Choice(name="256", value=256),
+        app_commands.Choice(name="320", value=320),
+        app_commands.Choice(name="384", value=384),
+        app_commands.Choice(name="448", value=448),
+        app_commands.Choice(name="512", value=512),
+        app_commands.Choice(name="576", value=576),
+        app_commands.Choice(name="640", value=640),
+        app_commands.Choice(name="704", value=704),
+        app_commands.Choice(name="768", value=768),
+        app_commands.Choice(name="832", value=832),
+    ])
+
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512):
         await context.defer()
-        job_queue = asyncio.Queue()
+        job_queue = queue.Queue()
         if context.channel.is_nsfw():
             """
             Dream up an image
@@ -147,7 +184,6 @@ class Dream(commands.Cog, name="dream"):
 
             if not sampler:
                 sampler = "k_lms"
-
             else:
                 sampler = sampler.value
 
@@ -158,8 +194,8 @@ class Dream(commands.Cog, name="dream"):
              'cfg_scale': cfgscale,
              'threshold': 0,
              'perlin': 0,
-             'height': 512,
-             'width': 512,
+             'height': height.value if not type(height) is int else height,
+             'width': width.value if not type(width) is int else width,
              'sampler_name': f"{sampler}",
              'seed': seed,
              'progress_images': False,
@@ -173,7 +209,6 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            job_queue = queue.Queue()
             job_queue.put(self.generate_image(generation_parameters))
 
             r = job_queue.get(block=True, timeout=60)
