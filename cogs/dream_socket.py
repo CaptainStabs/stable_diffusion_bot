@@ -86,6 +86,7 @@ class Dream(commands.Cog, name="dream"):
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
         height="Height of generated image, default 512",
+        hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts"
     )
 
     # @app_commands.command(name="dream", description="Generate image from prompt")
@@ -99,6 +100,7 @@ class Dream(commands.Cog, name="dream"):
         app_commands.Choice(name="KHEUN", value="k_heun"),
         app_commands.Choice(name="DPMPP_2", value="dpmpp_2"),
         app_commands.Choice(name="K_DPMPP_2", value="k_dpmpp_2"),
+
     ])
 
     @app_commands.choices(width=[
@@ -133,7 +135,7 @@ class Dream(commands.Cog, name="dream"):
         app_commands.Choice(name="832", value=832),
     ])
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512):
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False):
         await context.defer()
         job_queue = queue.Queue()
         if context.channel.is_nsfw():
@@ -204,7 +206,7 @@ class Dream(commands.Cog, name="dream"):
              'generation_mode': 'txt2img',
              'init_mask': '',
              'seamless': False,
-             'hires_fix': True,
+             'hires_fix': hires_fix,
              'strength': strength,
              'variation_amount': 0
              }
