@@ -213,7 +213,7 @@ class Dream(commands.Cog, name="dream"):
 
             job_queue.put(self.generate_image(generation_parameters))
 
-            r = job_queue.get(block=True, timeout=60)
+            r = job_queue.get()
             # print(r)
             if r:
                 img_name = r["url"].split("/")[-1]
