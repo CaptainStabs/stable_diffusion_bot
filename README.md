@@ -15,12 +15,6 @@ https://discord.com/oauth2/authorize?&client_id=YOUR_APPLICATION_ID_HERE&scope=b
 
 ## How to set up
 
-Requires https://github.com/invoke-ai/InvokeAI.
-
-Copy the `ldm` [folder](ldm) from this repo to your stable diffusion (InvokeAI) main folder and overwrite `server.py` with my version.
-
-You must setup the [config.json](config.json) file.
-
 Here is an explanation of what everything is:
 
 | Variable                  | Description                                                           |
