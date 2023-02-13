@@ -37,6 +37,7 @@ class Dream(commands.Cog, name="dream"):
         # Load cog-specific configs
         self.img_base_folder = bot.config["img_base_folder"]
         self.server_url = bot.config["server_url"]
+        # self.default_model = bot.config["default_model"]
 
         # Create socket client and connect to server
         self.sio = socketio.Client()
@@ -45,9 +46,22 @@ class Dream(commands.Cog, name="dream"):
         # Queues
         # Workaround to get data from  get_generation_result (which is called by socketio.on)
         self.result_queue = queue.Queue()
+        self.models = queue.Queue()
         self.job_queue = queue.Queue()
 
+
+        # Get active model
+        self.sio.emit("requestSystemConfig")
+        self.sio.on("systemConfig", self.get_models)
+        models = self.models.get()["model_list"]
+        self.active_model = list({k: v for k, v in models.items() if v["status"] == "active"}.keys())[0]
+
+    def get_models(self, socket_event):
+        if socket_event:
+            self.models.put(socket_event)
+
     def generate_image(self, generation_params):
+        # Tell server to generate image
         self.sio.emit("generateImage", (generation_params, False, False))
 
         t_end = time.time() + 60
@@ -78,6 +92,7 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.describe(
         prompt="Prompt for image generation",
+        model="Which model to use",
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
@@ -135,7 +150,7 @@ class Dream(commands.Cog, name="dream"):
         app_commands.Choice(name="832", value=832),
     ])
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False):
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
         await context.defer()
         job_queue = queue.Queue()
         if context.channel.is_nsfw():
@@ -154,6 +169,9 @@ class Dream(commands.Cog, name="dream"):
             # if steps > 50 or steps < 1:
             if steps > 500 or steps < 1:
                 await context.reply("**ERROR:** Steps must be between 1 and 50")
+
+            if model == "None":
+                model == self.active_model
 
             try:
                 await context.reply(f"{context.author.mention} requested an image of: `{prompt}`")
@@ -218,10 +236,10 @@ class Dream(commands.Cog, name="dream"):
             if r:
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["metadata"]["image"]["seed"]
+                model = r["metadata"]["model_weights"]
                 img_path = self.img_base_folder + img_name
                 print(img_path)
-                # await context.channel.send(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Filename: `{img_name}`", file=discord.File(img_path))
-                await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`", file=discord.File(img_path))
+                await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`    Model: `{model}`", file=discord.File(img_path))
 
             else:
                 await context.reply("SD backend is offline, please try again later")
