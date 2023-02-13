@@ -152,7 +152,6 @@ class Dream(commands.Cog, name="dream"):
 
     async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
         await context.defer()
-        job_queue = queue.Queue()
         if context.channel.is_nsfw():
             """
             Dream up an image
@@ -229,9 +228,9 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            job_queue.put(self.generate_image(generation_parameters))
+            self.job_queue.put(self.generate_image(generation_parameters))
 
-            r = job_queue.get()
+            r = self.job_queue.get()
             # print(r)
             if r:
                 img_name = r["url"].split("/")[-1]
