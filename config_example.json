@@ -9,5 +9,4 @@
   ],
   "img_base_folder": "F:\\stable-diffusion\\outputs\\img-samples\\bot\\",
   "server_url": "http://127.0.0.1:9090/#"
-  "default_model": "openjourney-4.0"
 }
