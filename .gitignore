@@ -145,7 +145,7 @@ cython_debug/
 
 # SQLITE database
 *.db
-*.json/
+
 
 # pytype static type analyzer
 .pytype/
@@ -158,4 +158,4 @@ cython_debug/
 
 # SQLITE database
 *.db
-*.json
+.vscode/settings.json
