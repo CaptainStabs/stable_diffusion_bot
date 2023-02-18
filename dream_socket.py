@@ -45,9 +45,10 @@ class Dream(commands.Cog, name="dream"):
 
         # Queues
         # Workaround to get data from  get_generation_result (which is called by socketio.on)
-        self.result_queue = queue.Queue()
+        self.result_queue = asyncio.Queue()
         self.models = queue.Queue()
-        self.job_queue = queue.Queue()
+        self.job_queue = asyncio.Queue()
+
 
 
         # Get active model
@@ -60,22 +61,28 @@ class Dream(commands.Cog, name="dream"):
         if socket_event:
             self.models.put(socket_event)
 
-    def generate_image(self, generation_params):
+    async def process_jobs(self):
+        while True:
+            job = await self.job_queue.get()
+            result = await job
+            self.job_queue.task_done()
+
+    async def generate_image(self, generation_params):
         # Tell server to generate image
-        self.sio.emit("generateImage", (generation_params, False, False))
+        await self.sio.emit("generateImage", (generation_params, False, False))
 
         t_end = time.time() + 60
         while time.time() < t_end:
             # wait for the server to generate the image
-            self.sio.on("generationResult", self.get_generation_result)
+            await self.sio.on("generationResult", self.get_generation_result)
             # Have to get the result from get_generation_result from a queue
             # because sio.on does not have a return value
-            response = self.result_queue.get(block=True, timeout=60)
+            response = await self.result_queue.get()
             return response
 
     def get_generation_result(self, socket_event):
         if socket_event:
-            self.result_queue.put(socket_event)
+            self.result_queue.put_nowait(socket_event)
 
     # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
     @commands.hybrid_command(
@@ -92,7 +99,7 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.describe(
         prompt="Prompt for image generation",
-        model="Which model to use, not implemented yet",
+        model="Which model to use",
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
@@ -101,7 +108,7 @@ class Dream(commands.Cog, name="dream"):
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
         height="Height of generated image, default 512",
-        hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts",
+        hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts"
     )
 
     # @app_commands.command(name="dream", description="Generate image from prompt")
@@ -206,7 +213,7 @@ class Dream(commands.Cog, name="dream"):
             else:
                 sampler = sampler.value
 
-            generation_parameters = {
+            generation_params = {
              'prompt': f"{prompt}",
              'iterations': 1,
              'steps': steps,
@@ -228,11 +235,12 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            self.job_queue.put(self.generate_image(generation_parameters))
+            await self.job_queue.put(self.generate_image(generation_params))
 
-            r = self.job_queue.get()
+            r = await self.job_queue.get()
+
             # print(r)
-            if r:
+            if r is not None:
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["metadata"]["image"]["seed"]
                 model = r["metadata"]["model_weights"]
@@ -242,6 +250,7 @@ class Dream(commands.Cog, name="dream"):
 
             else:
                 await context.reply("SD backend is offline, please try again later")
+            asyncio.ensure_future(self.process_jobs(), loop=self.loop)
 
         else:
             await context.reply("This command must be used in an NSFW channel.")
