@@ -44,10 +44,8 @@ class Dream(commands.Cog, name="dream"):
         self.sio.connect(self.server_url)
 
         # Queues
-        # Workaround to get data from  get_generation_result (which is called by socketio.on)
-        self.result_queue = queue.Queue()
         self.models = queue.Queue()
-        self.job_queue = queue.Queue()
+        self.sem = None
 
 
         # Get active model
@@ -60,22 +58,23 @@ class Dream(commands.Cog, name="dream"):
         if socket_event:
             self.models.put(socket_event)
 
-    def generate_image(self, generation_params):
-        # Tell server to generate image
-        self.sio.emit("generateImage", (generation_params, False, False))
+    async def generate_image(self, generation_params):
+         async with self.sem:
+            # Tell server to generate image
+            self.sio.emit("generateImage", (generation_params, False, False))
+            # set up result handler
+            response = None
+            def on_generation_result(socket_event):
+                nonlocal response
+                response = socket_event
+            self.sio.on("generationResult", on_generation_result)
 
-        t_end = time.time() + 60
-        while time.time() < t_end:
-            # wait for the server to generate the image
-            self.sio.on("generationResult", self.get_generation_result)
-            # Have to get the result from get_generation_result from a queue
-            # because sio.on does not have a return value
-            response = self.result_queue.get(block=True, timeout=60)
+            # wait for a response (or timeout at t_end)
+            t_end = time.time() + 60
+            while response is None and time.time() < t_end:
+                await asyncio.sleep(1)
+
             return response
-
-    def get_generation_result(self, socket_event):
-        if socket_event:
-            self.result_queue.put(socket_event)
 
     # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
     @commands.hybrid_command(
@@ -152,7 +151,8 @@ class Dream(commands.Cog, name="dream"):
 
     async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
         await context.defer()
-        loop = asyncio.get_running_loop()
+        if self.sem is None:
+            self.sem = asyncio.Semaphore(value=1)  # one concurrent request
         if context.channel.is_nsfw():
             """
             Dream up an image
@@ -229,7 +229,7 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            r = await loop.run_in_executor(None, self.generate_image, payload)
+            r = await self.generate_image(generation_parameters)
             # print(r)
             if r:
                 img_name = r["url"].split("/")[-1]
