@@ -28,6 +28,23 @@ import socketio
 import time
 import queue
 
+global choices
+choices = [
+    app_commands.Choice(name="64", value=64),
+    app_commands.Choice(name="128", value=128),
+    app_commands.Choice(name="192", value=192),
+    app_commands.Choice(name="256", value=256),
+    app_commands.Choice(name="320", value=320),
+    app_commands.Choice(name="384", value=384),
+    app_commands.Choice(name="448", value=448),
+    app_commands.Choice(name="512", value=512),
+    app_commands.Choice(name="576", value=576),
+    app_commands.Choice(name="640", value=640),
+    app_commands.Choice(name="704", value=704),
+    app_commands.Choice(name="768", value=768),
+    app_commands.Choice(name="832", value=832),
+]
+
 
 # Here we name the cog and create a new class for the cog.
 class Dream(commands.Cog, name="dream"):
@@ -51,15 +68,25 @@ class Dream(commands.Cog, name="dream"):
         # Get active model
         self.sio.emit("requestSystemConfig")
         self.sio.on("systemConfig", self.get_models)
-        models = self.models.get()["model_list"]
+        # models = self.models.get()["model_list"]
+        models = list({k: v for k, v in models.items()})
+        self.model_list = models
         self.active_model = list({k: v for k, v in models.items() if v["status"] == "active"}.keys())[0]
+
 
     def get_models(self, socket_event):
         if socket_event:
             self.models.put(socket_event)
 
-    async def generate_image(self, generation_params):
+    async def generate_image(self, generation_params, model):
          async with self.sem:
+            if model != self.active_model:
+                if model in self.model_list:
+                    self.active_model = model
+                    self.sio.emit("requestModelChange", (model))
+                else:
+                    return False
+
             # Tell server to generate image
             self.sio.emit("generateImage", (generation_params, False, False))
             # set up result handler
@@ -91,7 +118,7 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.describe(
         prompt="Prompt for image generation",
-        model="Which model to use, not implemented yet",
+        model="Which model to use, view list by running `/models`",
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
@@ -117,37 +144,10 @@ class Dream(commands.Cog, name="dream"):
 
     ])
 
-    @app_commands.choices(width=[
-        app_commands.Choice(name="64", value=64),
-        app_commands.Choice(name="128", value=128),
-        app_commands.Choice(name="192", value=192),
-        app_commands.Choice(name="256", value=256),
-        app_commands.Choice(name="320", value=320),
-        app_commands.Choice(name="384", value=384),
-        app_commands.Choice(name="448", value=448),
-        app_commands.Choice(name="512", value=512),
-        app_commands.Choice(name="576", value=576),
-        app_commands.Choice(name="640", value=640),
-        app_commands.Choice(name="704", value=704),
-        app_commands.Choice(name="768", value=768),
-        app_commands.Choice(name="832", value=832),
-    ])
 
-    @app_commands.choices(height=[
-        app_commands.Choice(name="64", value=64),
-        app_commands.Choice(name="128", value=128),
-        app_commands.Choice(name="192", value=192),
-        app_commands.Choice(name="256", value=256),
-        app_commands.Choice(name="320", value=320),
-        app_commands.Choice(name="384", value=384),
-        app_commands.Choice(name="448", value=448),
-        app_commands.Choice(name="512", value=512),
-        app_commands.Choice(name="576", value=576),
-        app_commands.Choice(name="640", value=640),
-        app_commands.Choice(name="704", value=704),
-        app_commands.Choice(name="768", value=768),
-        app_commands.Choice(name="832", value=832),
-    ])
+    @app_commands.choices(width=choices)
+
+    @app_commands.choices(height=choices)
 
     async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
         await context.defer()
@@ -229,9 +229,12 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            await asyncio.sleep(3)
-            r = await self.generate_image(generation_parameters)
-            # print(r)
+            if model != self.active_model:
+                if model in self.model_list:
+                    await context.send(f"Changing model to {model}, please wait...")
+                # Not putting the non-model in the model_list logic here because it will still allow it to generate image (bad)
+
+            r = await self.generate_image(generation_parameters, model)
             if r:
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["metadata"]["image"]["seed"]
@@ -239,6 +242,10 @@ class Dream(commands.Cog, name="dream"):
                 img_path = self.img_base_folder + img_name
                 print(img_path)
                 await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`    Model: `{model}`", file=discord.File(img_path))
+                await context.send(f"**Current model:** {model}")
+
+            elif r == False:
+                await context.reply("**ERROR:** Failed to generate image, model you requested does not exist. Please run `/models` to see a list of available models.")
 
             else:
                 await context.reply("SD backend is offline, please try again later")
