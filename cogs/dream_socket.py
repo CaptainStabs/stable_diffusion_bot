@@ -95,7 +95,7 @@ class Dream(commands.Cog, name="dream"):
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
-        initimg="Initial image to use",
+        initimg="Initial image to use, **NOT REIMPLEMENTED YET**",
         steps="Number of steps to take to generate, must be < 50 (default 50)",
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
@@ -229,6 +229,7 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
+            await asyncio.sleep(3)
             r = await self.generate_image(generation_parameters)
             # print(r)
             if r:
