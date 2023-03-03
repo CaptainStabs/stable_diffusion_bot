@@ -44,8 +44,11 @@ class Dream(commands.Cog, name="dream"):
         self.sio.connect(self.server_url)
 
         # Queues
+        # Workaround to get data from  get_generation_result (which is called by socketio.on)
+        self.result_queue = asyncio.Queue()
         self.models = queue.Queue()
-        self.sem = None
+        self.job_queue = asyncio.Queue()
+
 
 
         # Get active model
@@ -58,23 +61,28 @@ class Dream(commands.Cog, name="dream"):
         if socket_event:
             self.models.put(socket_event)
 
+    async def process_jobs(self):
+        while True:
+            job = await self.job_queue.get()
+            result = await job
+            self.job_queue.task_done()
+
     async def generate_image(self, generation_params):
-         async with self.sem:
-            # Tell server to generate image
-            self.sio.emit("generateImage", (generation_params, False, False))
-            # set up result handler
-            response = None
-            def on_generation_result(socket_event):
-                nonlocal response
-                response = socket_event
-            self.sio.on("generationResult", on_generation_result)
+        # Tell server to generate image
+        await self.sio.emit("generateImage", (generation_params, False, False))
 
-            # wait for a response (or timeout at t_end)
-            t_end = time.time() + 60
-            while response is None and time.time() < t_end:
-                await asyncio.sleep(1)
-
+        t_end = time.time() + 60
+        while time.time() < t_end:
+            # wait for the server to generate the image
+            await self.sio.on("generationResult", self.get_generation_result)
+            # Have to get the result from get_generation_result from a queue
+            # because sio.on does not have a return value
+            response = await self.result_queue.get()
             return response
+
+    def get_generation_result(self, socket_event):
+        if socket_event:
+            self.result_queue.put_nowait(socket_event)
 
     # Here you can just add your own commands, you'll always need to provide "self" as first parameter.
     @commands.hybrid_command(
@@ -91,16 +99,16 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.describe(
         prompt="Prompt for image generation",
-        model="Which model to use, not implemented yet",
+        model="Which model to use",
         seed="Seed for image, default is current epoch time",
         strength="Amount of noise that is added to input image",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
-        initimg="Initial image to use, **NOT REIMPLEMENTED YET**",
+        initimg="Initial image to use",
         steps="Number of steps to take to generate, must be < 50 (default 50)",
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
         height="Height of generated image, default 512",
-        hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts",
+        hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts"
     )
 
     # @app_commands.command(name="dream", description="Generate image from prompt")
@@ -151,8 +159,6 @@ class Dream(commands.Cog, name="dream"):
 
     async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
         await context.defer()
-        if self.sem is None:
-            self.sem = asyncio.Semaphore(value=1)  # one concurrent request
         if context.channel.is_nsfw():
             """
             Dream up an image
@@ -207,7 +213,7 @@ class Dream(commands.Cog, name="dream"):
             else:
                 sampler = sampler.value
 
-            generation_parameters = {
+            generation_params = {
              'prompt': f"{prompt}",
              'iterations': 1,
              'steps': steps,
@@ -229,10 +235,12 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0
              }
 
-            await asyncio.sleep(3)
-            r = await self.generate_image(generation_parameters)
+            await self.job_queue.put(self.generate_image(generation_params))
+
+            r = await self.job_queue.get()
+
             # print(r)
-            if r:
+            if r is not None:
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["metadata"]["image"]["seed"]
                 model = r["metadata"]["model_weights"]
@@ -242,6 +250,7 @@ class Dream(commands.Cog, name="dream"):
 
             else:
                 await context.reply("SD backend is offline, please try again later")
+            asyncio.ensure_future(self.process_jobs(), loop=self.loop)
 
         else:
             await context.reply("This command must be used in an NSFW channel.")
