@@ -14,6 +14,7 @@ from discord import app_commands
 import discord
 
 from helpers import checks
+from helpers.get_models import model_lister
 import json
 import re
 import requests
@@ -28,6 +29,8 @@ import socketio
 import time
 import queue
 
+# These have to be done before the class so that the choices can be
+# generated dynamically.
 global choices
 choices = [
     app_commands.Choice(name="64", value=64),
@@ -45,6 +48,14 @@ choices = [
     app_commands.Choice(name="832", value=832),
 ]
 
+global model_list
+models = model_lister()
+
+model_list = []
+
+for m in models:
+    model_list.append(app_commands.Choice(name=m, value=m))
+print(model_list)
 
 # Here we name the cog and create a new class for the cog.
 class Dream(commands.Cog, name="dream"):
@@ -64,13 +75,11 @@ class Dream(commands.Cog, name="dream"):
         self.models = queue.Queue()
         self.sem = None
 
-
         # Get active model
         self.sio.emit("requestSystemConfig")
         self.sio.on("systemConfig", self.get_models)
-        # models = self.models.get()["model_list"]
-        models = list({k: v for k, v in models.items()})
-        self.model_list = models
+        models = self.models.get()["model_list"]
+        self.model_list = model_list
         self.active_model = list({k: v for k, v in models.items() if v["status"] == "active"}.keys())[0]
 
 
@@ -81,12 +90,8 @@ class Dream(commands.Cog, name="dream"):
     async def generate_image(self, generation_params, model):
          async with self.sem:
             if model != self.active_model:
-                if model in self.model_list:
-                    self.active_model = model
-                    self.sio.emit("requestModelChange", (model))
-                else:
-                    return False
-
+                self.active_model = model
+                self.sio.emit("requestModelChange", (model))
             # Tell server to generate image
             self.sio.emit("generateImage", (generation_params, False, False))
             # set up result handler
@@ -149,7 +154,9 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.choices(height=choices)
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: str="None"):
+    @app_commands.choices(model=model_list)
+
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: app_commands.Choice[str]=None):
         await context.defer()
         if self.sem is None:
             self.sem = asyncio.Semaphore(value=1)  # one concurrent request
@@ -170,8 +177,10 @@ class Dream(commands.Cog, name="dream"):
             if steps > 500 or steps < 1:
                 await context.reply("**ERROR:** Steps must be between 1 and 50")
 
-            if model == "None":
+            if model == None:
                 model == self.active_model
+            else:
+                model = model.value
 
             try:
                 await context.reply(f"{context.author.mention} requested an image of: `{prompt}`")
@@ -244,8 +253,6 @@ class Dream(commands.Cog, name="dream"):
                 await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`    Model: `{model}`", file=discord.File(img_path))
                 await context.send(f"**Current model:** {model}")
 
-            elif r == False:
-                await context.reply("**ERROR:** Failed to generate image, model you requested does not exist. Please run `/models` to see a list of available models.")
 
             else:
                 await context.reply("SD backend is offline, please try again later")
