@@ -26,6 +26,7 @@ Here is an explanation of what everything is:
 | OWNERS                    | The user ID of all the bot owners                                     |
 | img_base_folder           | The path to where stable diffusion saves the images (if on windows ensure escaped backslashes) |
 | server_url                | By default stable diffusion's web server will run on the provided IP+port, only change if you changed your settings |
+| wait_time                 | How long the bot should wait for an image to generate, system dependent |
 
 
 ## How to start
