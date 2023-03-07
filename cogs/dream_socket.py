@@ -84,21 +84,25 @@ class Dream(commands.Cog, name="dream"):
             self.models.put(socket_event)
 
     async def generate_image(self, generation_params, model):
+         wt = self.bot.config["wait_time"]
          async with self.sem:
             if model != self.active_model:
                 self.active_model = model
                 self.sio.emit("requestModelChange", (model))
+                wt += 100 # Allow time for model to change
+
             # Tell server to generate image
             self.sio.emit("generateImage", (generation_params, False, False))
-            # set up result handler
+
+            # Set up result handler
             response = None
             def on_generation_result(socket_event):
                 nonlocal response
                 response = socket_event
             self.sio.on("generationResult", on_generation_result)
 
-            # wait for a response (or timeout at t_end)
-            t_end = time.time() + 60
+            # Wait for a response (or timeout at t_end)
+            t_end = time.time() + wait_time
             while response is None and time.time() < t_end:
                 await asyncio.sleep(1)
 
@@ -112,9 +116,6 @@ class Dream(commands.Cog, name="dream"):
 
     # This will only allow non-blacklisted members to execute the command
     @checks.not_blacklisted()
-
-    # This will only allow owners of the bot to execute the command -> config.json
-    # @checks.is_owner()
 
 
     @app_commands.describe(
@@ -169,8 +170,7 @@ class Dream(commands.Cog, name="dream"):
             if initimg and strength > 1:
                 await context.reply("**ERROR:** Strength must be between 0.0 and 1.0")
 
-            # if steps > 50 or steps < 1:
-            if steps > 500 or steps < 1:
+            if steps > 50 or steps < 1:
                 await context.reply("**ERROR:** Steps must be between 1 and 50")
 
             if model == None:
