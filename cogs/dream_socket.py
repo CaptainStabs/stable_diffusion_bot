@@ -50,12 +50,8 @@ choices = [
 
 global model_list
 models = model_lister()
+model_list = [app_commands.Choice(name=m, value=m) for m in models]
 
-model_list = []
-
-for m in models:
-    model_list.append(app_commands.Choice(name=m, value=m))
-print(model_list)
 
 # Here we name the cog and create a new class for the cog.
 class Dream(commands.Cog, name="dream"):
