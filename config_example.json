@@ -9,5 +9,5 @@
   ],
   "img_base_folder": "F:\\stable-diffusion\\outputs\\img-samples\\bot\\",
   "server_url": "http://127.0.0.1:9090/#",
-  "wait_time": 60,
+  "wait_time": 60
 }
