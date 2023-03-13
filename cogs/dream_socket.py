@@ -83,8 +83,9 @@ class Dream(commands.Cog, name="dream"):
         if socket_event:
             self.models.put(socket_event)
 
-    async def generate_image(self, generation_params, model):
+    async def generate_image(self, generation_params, facefix_params, model):
          wt = self.bot.config["wait_time"]
+
          async with self.sem:
             if model != self.active_model:
                 self.active_model = model
@@ -92,7 +93,7 @@ class Dream(commands.Cog, name="dream"):
                 wt += 100 # Allow time for model to change
 
             # Tell server to generate image
-            self.sio.emit("generateImage", (generation_params, False, False))
+            self.sio.emit("generateImage", (generation_params, False, facefix_params))
 
             # Set up result handler
             response = None
@@ -102,7 +103,7 @@ class Dream(commands.Cog, name="dream"):
             self.sio.on("generationResult", on_generation_result)
 
             # Wait for a response (or timeout at t_end)
-            t_end = time.time() + wait_time
+            t_end = time.time() + wt
             while response is None and time.time() < t_end:
                 await asyncio.sleep(1)
 
@@ -122,14 +123,15 @@ class Dream(commands.Cog, name="dream"):
         prompt="Prompt for image generation",
         model="Which model to use, view list by running `/models`",
         seed="Seed for image, default is current epoch time",
-        strength="Amount of noise that is added to input image",
+        strength="Amount of noise that is added to input image, or img2img strength if initimg",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
-        initimg="Initial image to use, **NOT REIMPLEMENTED YET**",
+        initimg="Initial image to use, must be a URL to a png or jp(e)g file",
         steps="Number of steps to take to generate, must be < 50 (default 50)",
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
         height="Height of generated image, default 512",
         hires_fix="Generation in two steps, slower, use when you want a larger and more coherent image with fewer artifacts",
+        face_fix_strength="Set 0 to disable face fix, 1 is typically a good value. Defaults to 0.",
     )
 
     # @app_commands.command(name="dream", description="Generate image from prompt")
@@ -153,7 +155,7 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.choices(model=model_list)
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: app_commands.Choice[str]=None):
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: app_commands.Choice[str]=None, face_fix_strength: int=0):
         await context.defer()
         if self.sem is None:
             self.sem = asyncio.Semaphore(value=1)  # one concurrent request
@@ -187,6 +189,7 @@ class Dream(commands.Cog, name="dream"):
             if initimg:
                 # Previously generated image
                 initimg = initimg.strip()
+
                 # Not really sure how to replace this with regex, the middle part of the string is a base64 encoded string
                 # the first 8 characters of a UUID4
                 if len(initimg) == 29:
@@ -204,8 +207,16 @@ class Dream(commands.Cog, name="dream"):
                 img_type = initimg[-3:]
                 if img_type == "peg":
                     img_type = "jpeg"
+                b64_img = f"data:image/{img_type};base64,{str(base64.b64encode(img).decode('utf-8'))}"
+                form_data = {
+                "data": json.dumps({"kind":"init", "dataURL":b64_img, "filename": initimg.split("/")[-1]})
+                }
+                # r = requests.post(url=self.server_url + "/upload", data=form_data, files={'file': initimg})
+                r = requests.post(url=self.server_url + "/upload", data=form_data)
+                r = r.json()
+                initimg = r["url"]
+                init_height, init_width = r["height"], r["width"]
 
-                initimg = f"data:image/{img_type};base64,{str(base64.b64encode(img).decode('utf-8'))}"
 
             if not sampler:
                 sampler = "k_lms"
@@ -226,12 +237,14 @@ class Dream(commands.Cog, name="dream"):
              'progress_images': False,
              'progress_latents': False,
              'save_intermediates': 5,
-             'generation_mode': 'txt2img',
+             'generation_mode': 'txt2img' if not initimg else "img2img",
+             'init_img': initimg,
              'init_mask': '',
              'seamless': False,
              'hires_fix': hires_fix,
              'strength': strength,
-             'variation_amount': 0
+             'variation_amount': 0,
+             'fit': True
              }
 
             if model != self.active_model:
@@ -239,7 +252,12 @@ class Dream(commands.Cog, name="dream"):
                     await context.send(f"Changing model to {model}, please wait...")
                 # Not putting the non-model in the model_list logic here because it will still allow it to generate image (bad)
 
-            r = await self.generate_image(generation_parameters, model)
+            if face_fix_strength:
+                face_fix_strength = {"type":'gfpgan', "strength":face_fix_strength}
+            else:
+                face_fix_strength = False
+
+            r = await self.generate_image(generation_parameters, face_fix_strength, model)
             if r:
                 img_name = r["url"].split("/")[-1]
                 seed_name = r["metadata"]["image"]["seed"]
