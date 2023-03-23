@@ -174,11 +174,16 @@ class Dream(commands.Cog, name="dream"):
 
             if steps > 50 or steps < 1:
                 await context.reply("**ERROR:** Steps must be between 1 and 50")
-
             if model == None:
                 model == self.active_model
+                model_changed = False
             else:
                 model = model.value
+                model_changed = True
+                if model != self.active_model:
+                    await context.send(f"Changing model to `{model}`, please wait...")
+                    await self.bot.change_presence(activity=discord.Game(f"Model:`{model}`"))
+                    # Not putting the non-model in the model_list logic here because it will still allow it to generate image (bad)
 
             try:
                 await context.reply(f"{context.author.mention} requested an image of: `{prompt}`")
@@ -187,9 +192,9 @@ class Dream(commands.Cog, name="dream"):
                 await context.channel.send(f"{context.author.mention} requested an image of: `{prompt}`")
 
             if initimg:
-                # Previously generated image
                 initimg = initimg.strip()
 
+                # Previously generated image
                 # Not really sure how to replace this with regex, the middle part of the string is a base64 encoded string
                 # the first 8 characters of a UUID4
                 if len(initimg) == 29:
@@ -238,7 +243,7 @@ class Dream(commands.Cog, name="dream"):
              'progress_latents': False,
              'save_intermediates': 5,
              'generation_mode': 'txt2img' if not initimg else "img2img",
-             'init_img': initimg,
+             'init_img': initimg if initimg else "",
              'init_mask': '',
              'seamless': False,
              'hires_fix': hires_fix,
@@ -246,11 +251,6 @@ class Dream(commands.Cog, name="dream"):
              'variation_amount': 0,
              'fit': True
              }
-
-            if model != self.active_model:
-                if model in self.model_list:
-                    await context.send(f"Changing model to {model}, please wait...")
-                # Not putting the non-model in the model_list logic here because it will still allow it to generate image (bad)
 
             if face_fix_strength:
                 face_fix_strength = {"type":'gfpgan', "strength":face_fix_strength}
@@ -265,8 +265,8 @@ class Dream(commands.Cog, name="dream"):
                 img_path = self.img_base_folder + img_name
                 print(img_path)
                 await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`    Model: `{model}`", file=discord.File(img_path))
-                await context.send(f"**Current model:** {model}")
-
+                if model_changed:
+                    await context.send(f"**Current model:** {model}")
 
             else:
                 await context.reply("SD backend is offline, please try again later")

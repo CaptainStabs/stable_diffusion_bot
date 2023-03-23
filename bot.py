@@ -108,17 +108,17 @@ async def on_ready() -> None:
     print(f"Python version: {platform.python_version()}")
     print(f"Running on: {platform.system()} {platform.release()} ({os.name})")
     print("-------------------")
-    status_task.start()
+    # status_task.start()
     await bot.tree.sync()
 
 
-@tasks.loop(minutes=1.0)
-async def status_task() -> None:
-    """
-    Setup the game status task of the bot
-    """
-    statuses = ["with you!", "with Krypton!", "with humans!"]
-    await bot.change_presence(activity=discord.Game(random.choice(statuses)))
+# @tasks.loop(minutes=1.0)
+# async def status_task() -> None:
+#     """
+#     Setup the game status task of the bot
+#     """
+#     statuses = ["with you!", "with Krypton!", "with humans!"]
+#     await bot.change_presence(activity=discord.Game(random.choice(statuses)))
 
 
 @bot.event
