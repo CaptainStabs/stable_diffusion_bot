@@ -64,7 +64,7 @@ python bot.py
 
 To start the stable diffusion web-server that the bot uses, in a seperate terminal (in the stable diffusion working directory) run:
 ```
-python ./scripts/dream.py --web
+invoke --web # include `--root_dir <path to stable diffusion folder> OR . if your working directory is the sd folder` if you installed in conda
 ```
 
 You can run it with whatever other parameters you want (such as `-F`)
