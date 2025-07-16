@@ -60,7 +60,10 @@ class Models(commands.Cog, name="models"):
         await context.defer()
         self.sio.emit("requestSystemConfig")
         self.sio.on("systemConfig", self.get_models)
-        models = self.models.get()
+        try:
+            models = await asyncio.wait_for(self.models.get(), timeout=10.0)
+        except asyncio.TimeoutError:
+            raise commands.CommandError("Restart the bot")
         print(models)
         if models:
             models = models["model_list"]

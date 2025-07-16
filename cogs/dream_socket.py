@@ -123,9 +123,10 @@ class Dream(commands.Cog, name="dream"):
         prompt="Prompt for image generation",
         model="Which model to use, view list by running `/models`",
         seed="Seed for image, default is current epoch time",
-        strength="Amount of noise that is added to input image, or img2img strength if initimg",
+        variation_amount="Use with a previous seed. Interesting variations of the seed occur between 0.1 and 0.3",
         cfgscale="Adjust how much the image looks like the prompt and/or initimg",
         initimg="Initial image to use, must be a URL to a png or jp(e)g file",
+        strength="img2img strength if initimg, must be between 0 and 1.0",
         steps="Number of steps to take to generate, must be < 50 (default 50)",
         sampler="Which sampler to use for image generation, default is kmls",
         width="Width of generated image, default 512",
@@ -155,7 +156,7 @@ class Dream(commands.Cog, name="dream"):
 
     @app_commands.choices(model=model_list)
 
-    async def dream_command(self, context: Context, prompt: str, seed: int =-1, strength: float=0.75, cfgscale: float=7.5, initimg: str=None, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: app_commands.Choice[str]=None, face_fix_strength: int=0):
+    async def dream_command(self, context: Context, prompt: str, seed: int =-1, variation_amount: float=0.0, cfgscale: float=7.5, initimg: str=None, strength: float=0.75, steps: int=50, sampler: app_commands.Choice[str]=None, width: app_commands.Choice[int]=512, height: app_commands.Choice[int]=512, hires_fix: bool=False, model: app_commands.Choice[str]=None, face_fix_strength: int=0):
         await context.defer()
         if self.sem is None:
             self.sem = asyncio.Semaphore(value=1)  # one concurrent request
@@ -169,11 +170,16 @@ class Dream(commands.Cog, name="dream"):
             :param strength: make stronk
             :param initimg: Either a file from the message, or a previously generated img
             """
-            if initimg and strength > 1:
+            if initimg and strength >= 1.0:
                 await context.reply("**ERROR:** Strength must be between 0.0 and 1.0")
+
+            if not initimg and strength != 0.75:
+                # Strength does not do anything without an initimg, so we can just use the default
+                strength = 0.75
 
             if steps > 50 or steps < 1:
                 await context.reply("**ERROR:** Steps must be between 1 and 50")
+
             if model == None:
                 model == self.active_model
                 model_changed = False
@@ -228,6 +234,9 @@ class Dream(commands.Cog, name="dream"):
             else:
                 sampler = sampler.value
 
+            height = height.value if not type(height) is int else height
+            width =  width.value if not type(width) is int else width
+
             generation_parameters = {
              'prompt': f"{prompt}",
              'iterations': 1,
@@ -235,8 +244,8 @@ class Dream(commands.Cog, name="dream"):
              'cfg_scale': cfgscale,
              'threshold': 0,
              'perlin': 0,
-             'height': height.value if not type(height) is int else height,
-             'width': width.value if not type(width) is int else width,
+             'height': height,
+             'width': width,
              'sampler_name': f"{sampler}",
              'seed': seed,
              'progress_images': False,
@@ -248,9 +257,11 @@ class Dream(commands.Cog, name="dream"):
              'seamless': False,
              'hires_fix': hires_fix,
              'strength': strength,
-             'variation_amount': 0,
              'fit': True
              }
+
+            if variation_amount:
+                generation_parameters['variation_amount'] = variation_amount
 
             if face_fix_strength:
                 face_fix_strength = {"type":'gfpgan', "strength":face_fix_strength}
@@ -264,7 +275,7 @@ class Dream(commands.Cog, name="dream"):
                 model = r["metadata"]["model_weights"]
                 img_path = self.img_base_folder + img_name
                 print(img_path)
-                await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Filename: `{img_name}`    Model: `{model}`", file=discord.File(img_path))
+                await context.reply(f"Prompt: `{prompt}`    Seed: `{seed_name}`   Strength: `{strength}`   cfgscale: `{cfgscale}`   Steps: `{steps}`   Sampler: `{sampler}`   Res (WxH): `{width}x{height}`   Filename: `{img_name}`    hi_res_fix: `{hires_fix}`    variation_amount: `{variation_amount}`    Model: `{model}`", file=discord.File(img_path))
                 if model_changed:
                     await context.send(f"**Current model:** {model}")
 
